@@ -2,20 +2,20 @@ import streamlit as st
 import pandas as pd
 import joblib
 
-# ==========================
-# LOAD MODEL DAN ENCODER
-# ==========================
+# =====================================
+# LOAD MODEL
+# =====================================
+
 try:
     model = joblib.load("model_knn.pkl")
-    encoders = joblib.load("encoders.pkl")
-
 except Exception as e:
     st.error(f"Gagal memuat model: {e}")
     st.stop()
 
-# ==========================
+# =====================================
 # HEADER
-# ==========================
+# =====================================
+
 st.set_page_config(
     page_title="Prediksi Prestasi Siswa",
     page_icon="🎓",
@@ -25,9 +25,9 @@ st.set_page_config(
 st.title("🎓 Prediksi Prestasi Siswa")
 st.write("Klasifikasi Grade Siswa Menggunakan KNN")
 
-# ==========================
+# =====================================
 # INPUT USER
-# ==========================
+# =====================================
 
 gender = st.selectbox(
     "Gender",
@@ -35,89 +35,131 @@ gender = st.selectbox(
 )
 
 race = st.selectbox(
-    "Race/Ethnicity",
+    "Race / Ethnicity",
     ["group A", "group B", "group C", "group D", "group E"]
 )
 
 education = st.selectbox(
     "Pendidikan Orang Tua",
     [
-        "some high school",
-        "high school",
-        "some college",
         "associate's degree",
         "bachelor's degree",
-        "master's degree"
+        "high school",
+        "master's degree",
+        "some college",
+        "some high school"
     ]
 )
 
 lunch = st.selectbox(
     "Lunch",
-    ["standard", "free/reduced"]
+    ["free/reduced", "standard"]
 )
 
 prep = st.selectbox(
     "Test Preparation",
-    ["none", "completed"]
+    ["completed", "none"]
 )
 
-math = st.slider(
+math_score = st.slider(
     "Math Score",
     0, 100, 70
 )
 
-reading = st.slider(
+reading_score = st.slider(
     "Reading Score",
     0, 100, 70
 )
 
-writing = st.slider(
+writing_score = st.slider(
     "Writing Score",
     0, 100, 70
 )
 
-# ==========================
+# =====================================
+# MAPPING MANUAL
+# =====================================
+
+gender_map = {
+    "female": 0,
+    "male": 1
+}
+
+race_map = {
+    "group A": 0,
+    "group B": 1,
+    "group C": 2,
+    "group D": 3,
+    "group E": 4
+}
+
+education_map = {
+    "associate's degree": 0,
+    "bachelor's degree": 1,
+    "high school": 2,
+    "master's degree": 3,
+    "some college": 4,
+    "some high school": 5
+}
+
+lunch_map = {
+    "free/reduced": 0,
+    "standard": 1
+}
+
+prep_map = {
+    "completed": 0,
+    "none": 1
+}
+
+# =====================================
 # PREDIKSI
-# ==========================
+# =====================================
 
 if st.button("Prediksi"):
 
     try:
 
         input_data = pd.DataFrame({
-            'gender': [encoders['gender'].transform([gender])[0]],
-            'race/ethnicity': [encoders['race/ethnicity'].transform([race])[0]],
-            'parental level of education': [encoders['parental level of education'].transform([education])[0]],
-            'lunch': [encoders['lunch'].transform([lunch])[0]],
-            'test preparation course': [encoders['test preparation course'].transform([prep])[0]],
-            'math score': [math],
-            'reading score': [reading],
-            'writing score': [writing]
+            'gender': [gender_map[gender]],
+            'race/ethnicity': [race_map[race]],
+            'parental level of education': [education_map[education]],
+            'lunch': [lunch_map[lunch]],
+            'test preparation course': [prep_map[prep]],
+            'math score': [math_score],
+            'reading score': [reading_score],
+            'writing score': [writing_score]
         })
 
         st.subheader("Data Uji")
+
         st.dataframe(input_data)
 
-        prediksi = model.predict(input_data)
+        prediction = model.predict(input_data)
 
-        total = math + reading + writing
-        persen = total / 300 * 100
+        total = (
+            math_score +
+            reading_score +
+            writing_score
+        )
+
+        percentage = total / 300 * 100
 
         st.success(
-            f"Prediksi Grade Siswa : {prediksi[0]}"
+            f"Prediksi Grade : {prediction[0]}"
         )
 
         st.metric(
             "Persentase Nilai",
-            f"{persen:.2f}%"
+            f"{percentage:.2f}%"
         )
 
     except Exception as e:
-        st.error(f"Terjadi error saat prediksi: {e}")
+        st.error(f"Error Prediksi: {e}")
 
-# ==========================
+# =====================================
 # DATA UJI OTOMATIS
-# ==========================
+# =====================================
 
 st.markdown("---")
 
@@ -128,15 +170,16 @@ if st.button("Coba Data Uji Otomatis"):
         test_data = pd.DataFrame({
             'gender': [0],
             'race/ethnicity': [2],
-            'parental level of education': [3],
+            'parental level of education': [4],
             'lunch': [1],
             'test preparation course': [0],
             'math score': [85],
-            'reading score': [88],
-            'writing score': [90]
+            'reading score': [90],
+            'writing score': [88]
         })
 
-        st.subheader("Data Uji Otomatis")
+        st.subheader("Contoh Data Uji")
+
         st.dataframe(test_data)
 
         hasil = model.predict(test_data)
@@ -146,16 +189,4 @@ if st.button("Coba Data Uji Otomatis"):
         )
 
     except Exception as e:
-        st.error(f"Error Data Uji: {e}")
-
-# ==========================
-# DEBUG ENCODER
-# ==========================
-
-with st.expander("Debug Encoder"):
-
-    st.write("Tipe encoders:")
-    st.write(type(encoders))
-
-    st.write("Isi encoders:")
-    st.write(encoders)
+        st.error(f"Error: {e}")
