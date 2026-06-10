@@ -6,7 +6,7 @@ import joblib
 # LOAD MODEL
 # ==========================
 
-model = joblib.load("model_knn.pkl")
+model = joblib.load("model_best.pkl")
 feature_columns = joblib.load("feature_columns.pkl")
 
 # ==========================
