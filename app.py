@@ -1,76 +1,91 @@
+import streamlit as st
 import pandas as pd
 import joblib
 
-from sklearn.preprocessing import LabelEncoder
-from sklearn.neighbors import KNeighborsClassifier
+# Load model
+model = joblib.load("model_knn.pkl")
+encoders = joblib.load("encoders.pkl")
 
-# ==========================
-# LOAD DATASET
-# ==========================
-df = pd.read_csv("StudentsPerformance.csv")
-
-# ==========================
-# FEATURE ENGINEERING
-# ==========================
-df['total_marks'] = (
-    df['math score']
-    + df['reading score']
-    + df['writing score']
+st.set_page_config(
+    page_title="Prediksi Prestasi Siswa",
+    page_icon="🎓",
+    layout="centered"
 )
 
-df['percentage'] = (
-    df['total_marks'] / 300 * 100
+st.title("🎓 Prediksi Prestasi Siswa")
+st.write("Klasifikasi Grade Menggunakan KNN")
+
+# Input User
+gender = st.selectbox(
+    "Gender",
+    ["female","male"]
 )
 
-df['grade'] = pd.cut(
-    df['percentage'],
-    bins=[0, 50, 65, 80, 100],
-    labels=['Fail', 'Average', 'Good', 'Excellent']
+race = st.selectbox(
+    "Race/Ethnicity",
+    ["group A","group B","group C","group D","group E"]
 )
 
-# ==========================
-# LABEL ENCODING
-# ==========================
-encoders = {}
-
-cat_cols = [
-    'gender',
-    'race/ethnicity',
-    'parental level of education',
-    'lunch',
-    'test preparation course'
-]
-
-for col in cat_cols:
-    le = LabelEncoder()
-    df[col] = le.fit_transform(df[col])
-    encoders[col] = le
-
-# ==========================
-# FEATURE & TARGET
-# ==========================
-X = df.drop(
-    ['total_marks', 'percentage', 'grade'],
-    axis=1
+education = st.selectbox(
+    "Pendidikan Orang Tua",
+    [
+        "some high school",
+        "high school",
+        "some college",
+        "associate's degree",
+        "bachelor's degree",
+        "master's degree"
+    ]
 )
 
-y = df['grade']
-
-# ==========================
-# TRAIN MODEL KNN
-# ==========================
-model = KNeighborsClassifier(
-    n_neighbors=5,
-    weights='distance'
+lunch = st.selectbox(
+    "Lunch",
+    ["standard","free/reduced"]
 )
 
-model.fit(X, y)
+prep = st.selectbox(
+    "Test Preparation",
+    ["none","completed"]
+)
 
-# ==========================
-# SIMPAN MODEL
-# ==========================
-joblib.dump(model, "model_knn.pkl")
-joblib.dump(encoders, "encoders.pkl")
+math = st.slider(
+    "Math Score",
+    0,100,70
+)
 
-print("model_knn.pkl berhasil dibuat")
-print("encoders.pkl berhasil dibuat")
+reading = st.slider(
+    "Reading Score",
+    0,100,70
+)
+
+writing = st.slider(
+    "Writing Score",
+    0,100,70
+)
+
+if st.button("Prediksi"):
+
+    input_data = pd.DataFrame({
+        'gender':[encoders['gender'].transform([gender])[0]],
+        'race/ethnicity':[encoders['race/ethnicity'].transform([race])[0]],
+        'parental level of education':[encoders['parental level of education'].transform([education])[0]],
+        'lunch':[encoders['lunch'].transform([lunch])[0]],
+        'test preparation course':[encoders['test preparation course'].transform([prep])[0]],
+        'math score':[math],
+        'reading score':[reading],
+        'writing score':[writing]
+    })
+
+    prediksi = model.predict(input_data)
+
+    st.success(
+        f"Prediksi Grade Siswa : {prediksi[0]}"
+    )
+
+    total = math + reading + writing
+    persen = total/300*100
+
+    st.metric(
+        "Persentase Nilai",
+        f"{persen:.2f}%"
+    )
