@@ -2,9 +2,16 @@ import streamlit as st
 import pandas as pd
 import joblib
 
-# Load model
-model = joblib.load("model_best.pkl")
-encoders = joblib.load("encoders.pkl")
+# ==========================
+# LOAD MODEL
+# ==========================
+
+model = joblib.load("model_knn.pkl")
+feature_columns = joblib.load("feature_columns.pkl")
+
+# ==========================
+# HEADER
+# ==========================
 
 st.set_page_config(
     page_title="Prediksi Prestasi Siswa",
@@ -13,79 +20,121 @@ st.set_page_config(
 )
 
 st.title("🎓 Prediksi Prestasi Siswa")
-st.write("Klasifikasi Grade Menggunakan KNN")
+st.write("Klasifikasi Grade Siswa Menggunakan KNN")
 
-# Input User
+# ==========================
+# INPUT USER
+# ==========================
+
 gender = st.selectbox(
     "Gender",
-    ["female","male"]
+    ["female", "male"]
 )
 
 race = st.selectbox(
     "Race/Ethnicity",
-    ["group A","group B","group C","group D","group E"]
+    [
+        "group A",
+        "group B",
+        "group C",
+        "group D",
+        "group E"
+    ]
 )
 
 education = st.selectbox(
     "Pendidikan Orang Tua",
     [
-        "some high school",
-        "high school",
-        "some college",
         "associate's degree",
         "bachelor's degree",
-        "master's degree"
+        "high school",
+        "master's degree",
+        "some college",
+        "some high school"
     ]
 )
 
 lunch = st.selectbox(
-    "Lunch",
-    ["standard","free/reduced"]
+    "Jenis Lunch",
+    [
+        "free/reduced",
+        "standard"
+    ]
 )
 
 prep = st.selectbox(
     "Test Preparation",
-    ["none","completed"]
+    [
+        "none",
+        "completed"
+    ]
 )
 
-math = st.slider(
+math_score = st.slider(
     "Math Score",
-    0,100,70
+    0, 100, 70
 )
 
-reading = st.slider(
+reading_score = st.slider(
     "Reading Score",
-    0,100,70
+    0, 100, 70
 )
 
-writing = st.slider(
+writing_score = st.slider(
     "Writing Score",
-    0,100,70
+    0, 100, 70
 )
 
-if st.button("Prediksi"):
+# ==========================
+# PREDIKSI
+# ==========================
 
-    input_data = pd.DataFrame({
-        'gender':[encoders['gender'].transform([gender])[0]],
-        'race/ethnicity':[encoders['race/ethnicity'].transform([race])[0]],
-        'parental level of education':[encoders['parental level of education'].transform([education])[0]],
-        'lunch':[encoders['lunch'].transform([lunch])[0]],
-        'test preparation course':[encoders['test preparation course'].transform([prep])[0]],
-        'math score':[math],
-        'reading score':[reading],
-        'writing score':[writing]
-    })
+if st.button("Prediksi Grade"):
 
-    prediksi = model.predict(input_data)
+    input_dict = {
+        "gender": gender,
+        "race/ethnicity": race,
+        "parental level of education": education,
+        "lunch": lunch,
+        "test preparation course": prep,
+        "math score": math_score,
+        "reading score": reading_score,
+        "writing score": writing_score
+    }
 
-    st.success(
-        f"Prediksi Grade Siswa : {prediksi[0]}"
+    input_df = pd.DataFrame([input_dict])
+
+    # One Hot Encoding sama seperti training
+    input_df = pd.get_dummies(
+        input_df,
+        drop_first=True
     )
 
-    total = math + reading + writing
-    persen = total/300*100
+    # Samakan kolom dengan model training
+    input_df = input_df.reindex(
+        columns=feature_columns,
+        fill_value=0
+    )
+
+    prediction = model.predict(input_df)[0]
+
+    total = (
+        math_score +
+        reading_score +
+        writing_score
+    )
+
+    percentage = total / 300 * 100
+
+    st.success(
+        f"Prediksi Grade : {prediction}"
+    )
 
     st.metric(
         "Persentase Nilai",
-        f"{persen:.2f}%"
+        f"{percentage:.2f}%"
     )
+
+    st.write("### Data Input")
+
+    st.dataframe(input_df)
